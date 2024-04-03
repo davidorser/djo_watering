@@ -9,7 +9,7 @@
 // Include Particle Device OS APIs
 #include "Particle.h"
 
-int waterThreshold = 2500;
+int waterThreshold = 2800;
 
 int measR = 0;
 unsigned long TimerMeas = 0;
@@ -19,15 +19,13 @@ int SensePIN = A1;
 int PowerPIN = A2;
 bool LightState = FALSE;
 
-int fn_SetLight(String command);
-
 STARTUP(WiFi.selectAntenna(ANT_AUTO)); // continually switches at high speed between antennas
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
 
 // Run the application and system concurrently in separate threads
-SYSTEM_THREAD(ENABLED);
+SYSTEM_THREAD(DISABLED);
 
 // Show system, cloud connectivity, and application logs over USB
 // View logs with CLI using 'particle serial monitor --follow'
@@ -52,7 +50,6 @@ void setup() {
     Serial.begin(9600);
     Particle.variable("measR", measR);
     Particle.variable("waterThreshold", waterThreshold);
-    Particle.function("setLight",fn_SetLight);
 }
 
 void loop() {
@@ -65,31 +62,18 @@ void loop() {
         Serial.print("test:");
         Serial.println(measR);
         
-        Particle.publish("measR",String(measR),PRIVATE);
+        Particle.publish("djoWater_measR",String(measR),PRIVATE);
         
         digitalWrite(PowerPIN,LOW);
         TimerMeas = millis() + 1000*60*60;  // wait 60 minutes
-        //TimerMeas = millis() + 2500;  // wait 2.5 seconds (testing mode)
+        TimerMeas = millis() + 2*60*1000;  // wait 2 minutes (testing mode)
     }
 
     if(measR > waterThreshold && millis() > TimerNotify) { //fails once every 40 days
-        Particle.publish("djoWaterMe",String(measR),PRIVATE);
+        Particle.publish("djoWater_WaterMe",String(measR),PRIVATE);
         TimerNotify = millis() + 1000*60*60*24; // Wait 24 hours
     }
     
     if(measR > waterThreshold) {LightState = TRUE;} else {LightState = FALSE;}
     digitalWrite(D0,LightState);
-}
-
-int fn_SetLight(String command) {
-    Serial.println("Setting Light State...");
-    if (command == "on") {
-        LightState = TRUE;
-        return 1;
-    }
-    if (command == "off") {
-        LightState = FALSE;
-        return 0;
-    }
-    else return -2;
 }
